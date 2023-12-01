@@ -1,0 +1,424 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[91]:
+
+
+#import libraries
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+
+
+# In[92]:
+
+
+data = pd.read_csv("AirPassengers.csv")
+
+
+# In[93]:
+
+
+data.head()
+# first 5 rows of data
+
+
+# In[94]:
+
+
+# data that is dependent on time--> timeseries
+data.info()
+
+
+# 
+
+# In[95]:
+
+
+data["Month"]
+
+
+# In[96]:
+
+
+data['Month'] = pd.to_datetime(data['Month'])
+# to_datetime()---> used to convert column into datetime format
+
+
+# In[97]:
+
+
+data["Month"]
+
+
+# In[98]:
+
+
+data.info()
+
+
+# In[99]:
+
+
+data.head()
+
+
+# In[100]:
+
+
+data.index
+
+
+# In[101]:
+
+
+data.index = data['Month']
+data.head()
+
+
+# In[102]:
+
+
+del data['Month']
+data.head()
+
+
+# In[103]:
+
+
+data.index
+
+
+# In[104]:
+
+
+data.head()
+
+
+# In[105]:
+
+
+data.plot()
+plt.show()
+# data is not stationary
+# it has trend
+# it has seasonality
+
+
+# how do i know for sure if my data is stationary?
+# - ad-fuller test
+# - kpss test
+
+# In[106]:
+
+
+#checking the stationarity of the data 
+
+# the statistical properties of a 
+#process generating a time series
+# do not change over time 
+
+
+#Thus, time series with trends, 
+#or with seasonality, are not stationary 
+#— the trend and seasonality will affect the value of the 
+#time series at different times.
+
+
+from statsmodels.tsa.stattools import adfuller
+#p-value > 0.05: ---> not stationary
+#p-value <= 0.05: --> stationary
+result = adfuller(data['#Passengers'])
+#print(result)
+#print('ADF Statistic: %f' % result[0])
+print('p-value: %f' % result[1])
+#print('Critical Values:')
+#for key, value in result[4].items():
+	#print('\t%s: %.3f' % (key, value))
+if result[1]>0.05:
+	print('not stationary')
+else:
+	print("stationary")
+
+
+# In[107]:
+
+
+# adfuller --> p<0.05 ---> stationary
+# kpss ------> p>0.05 ---> stationary
+
+
+# In[108]:
+
+
+from statsmodels.tsa.stattools import kpss
+stats,p,lags,critical_values=kpss(data['#Passengers'])
+if p>0.05:
+  print('stattionary')
+else:
+  print("not stationary")
+print(p)
+
+
+# We interpret this result using the p-value from the test. A p-value below a threshold (such as 5% or 1%) suggests we reject the null hypothesis (stationary), otherwise a p-value above the threshold suggests we fail to reject the null hypothesis (non-stationary).
+# 
+# 
+#  The test statistic is positive, meaning we are much less likely to reject the null hypothesis (it looks non-stationary).
+# 
+# Comparing the test statistic to the critical values, it looks like we would have to fail to reject the null hypothesis that the time series is non-stationary and does have time-dependent structure.
+# 
+# 
+
+# In[109]:
+
+
+#Trend is a pattern in data that shows 
+#the movement of a series to relatively
+#higher or lower values over a long period of time
+
+#removing trend using the rolling mean differencing 
+
+rolling_mean = data.rolling(window=12).mean()
+
+#Rolling means creating a rolling window with
+# a specified size and perform calculations on
+# the data in this window which, of course, rolls through the data.
+
+#Rolling averages are useful for finding long-term trends otherwise
+# disguised by occasional fluctuations. 
+rolling_mean_detrended = data - rolling_mean
+
+ax1 = plt.subplot(121)
+rolling_mean_detrended.plot(figsize=(12,4),color="tab:red", 
+                            title="Differenced With Rolling Mean over 12 months", 
+                            ax=ax1)
+ax2 = plt.subplot(122)
+data.plot(figsize=(12,4), 
+          color="tab:red", 
+          title="Original Values", 
+          ax=ax2)
+
+
+# In[110]:
+
+
+from statsmodels.tsa.seasonal import seasonal_decompose
+decompose_result = seasonal_decompose(rolling_mean_detrended.dropna())
+#We can check the trend and seasonality using the
+# seasonal_decompose() method.
+decompose_result.plot();
+
+
+#Here in the  chart, we can see the decomposed
+# structure of data and the structure of the components 
+#in the data set which were affecting it.
+
+
+# In[111]:
+
+
+rolling_mean_detrended.head(12)
+
+
+# In[112]:
+
+
+rolling_mean_detrended.shift(2).head(24)
+
+
+# In[113]:
+
+
+rolling_mean_detrended.head(24)
+
+
+# In[114]:
+
+
+#removing seasonality from the time series
+rolling_mean_detrended_diff = rolling_mean_detrended - rolling_mean_detrended.shift()
+
+ax1 = plt.subplot(121)
+rolling_mean_detrended_diff.plot(figsize=(12,4),
+                                 color="tab:red", 
+                                 title="rolled and differenced time series", 
+                                 ax=ax1)
+ax1 = plt.subplot(122)
+rolling_mean_detrended.plot(figsize=(12,4),color="tab:red", 
+                            title="Differenced With Rolling Mean over 12 months", 
+                            ax=ax1)
+
+
+# In[115]:
+
+
+ax1 = plt.subplot(121)
+rolling_mean_detrended_diff.plot(figsize=(12,4),
+                                 color="tab:red", 
+                                 title="rolled and differenced time series", 
+                                 ax=ax1)
+ax2 = plt.subplot(122)
+data.plot(figsize=(12,4), 
+          color="tab:red", 
+          title="Original Values",
+          ax=ax2)
+
+
+# In[116]:
+
+
+rolling_mean_detrended.shift().head(13)
+
+
+# In[117]:
+
+
+rolling_mean_detrended_diff = rolling_mean_detrended_diff.dropna()
+
+
+# In[118]:
+
+
+rolling_mean_detrended_diff
+
+
+# In[119]:
+
+
+result = adfuller(rolling_mean_detrended_diff['#Passengers'].dropna())
+#print(result)
+
+print('ADF Statistic: %f' % result[0])
+print('p-value: %f' % result[1])
+print('Critical Values:')
+for key, value in result[4].items():
+	print('\t%s: %.3f' % (key, value))
+
+
+# Running the example shows a negative value for the test statistic.
+# 
+# We can see that the value is larger than the critical values, again, meaning that we can fail to reject the null hypothesis and in turn that the time series is non-stationary.
+
+# Here the blue area is the confidence interval, and the candles started coming inside after the 13th candle. This can be due to the seasonality of 12-13 months.
+
+# In[120]:
+
+
+dftest = adfuller(rolling_mean_detrended_diff['#Passengers'], autolag = 'AIC')  #AIC=Akaike information Cretaion
+print("1. ADF : ",dftest[0])
+print("2. P-Value : ", dftest[1])
+print("3. Num Of Lags : ", dftest[2])
+print("4. Num Of Observations Used For ADF Regression and Critical Values Calculation :", dftest[3])
+print("5. Critical Values :")
+for key, val in dftest[4].items():
+  print("\t",key, ": ", val) 
+
+
+# Here in differencing overpower transformed time series, we have got a good p-value near about 0.02 and lower than 0.05 in that we can consider over data is stationary. 
+
+# In[121]:
+
+
+from pandas.plotting import autocorrelation_plot
+from statsmodels.graphics.tsaplots import plot_acf
+#To check for the stationarity of the time series,
+# statsmodels provides a plot_acf method to plot an autocorrelation plot.
+plot_acf(rolling_mean_detrended_diff['#Passengers'])
+
+
+# In[122]:
+
+
+from statsmodels.graphics.tsaplots import plot_pacf
+
+plot_pacf(rolling_mean_detrended_diff['#Passengers'])
+
+
+# In[123]:
+
+
+get_ipython().system('pip install pmdarima')
+from pmdarima import auto_arima
+
+
+# In[124]:
+
+
+order = auto_arima(rolling_mean_detrended_diff['#Passengers'], trace=True)
+order.summary()
+
+
+# In[125]:
+
+
+
+from statsmodels.tsa.arima_model import ARIMA
+import statsmodels.api as sm
+
+
+# In[126]:
+
+
+train = rolling_mean_detrended_diff.iloc[:120]['#Passengers']
+test = rolling_mean_detrended_diff.iloc[121:]['#Passengers']
+# ARIMA ---> AR + MA +I ---> ARIMA--> 3= AR , I=0 , MA=3
+model = sm.tsa.arima.ARIMA(train, order=(3,0,3))
+model_fit = model.fit() # training 
+model_fit.summary()
+
+
+# In[128]:
+
+
+rolling_mean_detrended_diff['predict'] = model_fit.predict(start= len(train), 
+                                    end=len(train)+len(test)- 1, 
+                                    dynamic=True)
+rolling_mean_detrended_diff[['#Passengers','predict']].plot()
+
+
+# In[130]:
+
+
+from statsmodels.tsa.statespace.sarimax import SARIMAX, SARIMAXResults
+
+model = SARIMAX(train, order=(1,0,2), seasonal_order=(1,0,2,12))
+model = model.fit()
+
+
+# In[131]:
+
+
+rolling_mean_detrended_diff['predict'] = model.predict(start= len(train) ,
+                                                       end=len(train)+len(test)- 1, 
+                                                       dynamic=True)
+rolling_mean_detrended_diff[['#Passengers','predict']].plot()
+
+
+# In[132]:
+
+
+#predicting the projections for the next 5 years
+
+forecast = model.forecast(steps=60)
+rolling_mean_detrended_diff.plot()
+forecast.plot()
+
+
+# In[133]:
+
+
+type(forecast)
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
